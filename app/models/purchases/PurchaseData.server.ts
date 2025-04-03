@@ -1,15 +1,13 @@
 // app/models/purchaseData.server.ts
 import db from "../../db.server";
 import { randomUUID } from "crypto";
-import { PurchaseDataDto } from '../dtos/purchaseData/purchaseData.dto';
-import { plainToInstance } from "class-transformer";
+import { PurchaseDataDto } from "../dtos/purchaseData/purchaseData.dto";
 import { createLineItems } from "./LineItems.server";
 
 export async function createPurchaseData(data: PurchaseDataDto) {
   const purchaseId = (data as any).id || randomUUID();
 
-  const purchaseDataDto = plainToInstance(PurchaseDataDto, data);
-  const walletAddress = purchaseDataDto.user_wallet_address;
+  const walletAddress = data.user_wallet_address;
 
   const purchase = await db.purchaseData.create({
     data: {
@@ -39,11 +37,7 @@ export async function createPurchaseData(data: PurchaseDataDto) {
   return purchase;
 }
 
-export async function getPurchaseDatas(
-  shop: string,
-  size = 25,
-  offset = 0
-) {
+export async function getPurchaseDatas(shop: string, size = 25, offset = 0) {
   const totalRecords = await db.purchaseData.count({ where: { shop } });
 
   const result = await db.purchaseData.findMany({
@@ -76,8 +70,7 @@ export async function updatePurchaseData(
   id: string,
   data: Partial<PurchaseDataDto>
 ) {
-  const purchaseDataDto = plainToInstance(PurchaseDataDto, data);
-  const walletAddress = purchaseDataDto.user_wallet_address;
+  const walletAddress = data.user_wallet_address;
 
   const purchase = await db.purchaseData.update({
     where: { id, shop },
