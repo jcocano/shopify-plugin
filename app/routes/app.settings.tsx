@@ -103,3 +103,21 @@ export default function Settings() {
     </Page>
   )
 }
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  console.error("ErrorBoundary caught an error:", error);
+  return (
+    <Page title="Error">
+      <BlockStack gap="400">
+        <h1>Algo salió mal</h1>
+        <p>{error.message}</p>
+        {error.stack && (
+          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#555" }}>
+            {error.stack}
+          </pre>
+        )}
+        <Button onClick={() => window.location.reload()}>Recargar página</Button>
+      </BlockStack>
+    </Page>
+  );
+}
