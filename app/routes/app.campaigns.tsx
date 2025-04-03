@@ -10,7 +10,7 @@ import { deleteCampaignOnTokenproof } from 'app/utils/tokenproof/deleteCampaignO
 import { authenticate } from 'app/shopify.server';
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  await authenticate.admin(request);
+  const { session, redirect } = await authenticate.admin(request);
 
   const shopDomain = await getShopDomain(request);
   const campaigns = await getCampaigns(shopDomain);

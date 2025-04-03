@@ -12,7 +12,7 @@ import { CustomizationSettings } from "app/components/settings/theme/Customizati
 import { authenticate } from "app/shopify.server";
 
 export async function loader({ request, }: LoaderFunctionArgs) {
-  await authenticate.admin(request);
+  const { session, redirect } = await authenticate.admin(request);
 
   const shopDomain = await getShopDomain(request)
   const storeSettings =  await getStoreSettings(shopDomain)

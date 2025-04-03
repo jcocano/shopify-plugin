@@ -49,7 +49,7 @@ interface FetcherData {
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
-  await authenticate.admin(request);
+  const { session, redirect } = await authenticate.admin(request);
 
   try {
     const shopDomain = await getShopDomain(request);

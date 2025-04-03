@@ -19,9 +19,7 @@ import {authenticate} from '../shopify.server';
 
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  // Cargamos dinámicamente los módulos de servidor, ya que este código se ejecuta en el backend
-  const { authenticate } = await import('app/shopify.server');
-  await authenticate.admin(request);
+  const { session, redirect } = await authenticate.admin(request);
 
   const { getShopDomain } = await import('app/utils/shopify/getShopDomain');
   const shopDomain = await getShopDomain(request);
