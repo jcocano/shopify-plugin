@@ -14,6 +14,8 @@ import { usePagination, useBulkActions } from 'app/hooks';
 import { purchaseDataShortOptions } from 'app/utils/constants/purchaseDataShortOptions';
 import { exportToCSV } from 'app/utils/misc/exportToCSV';
 import { copyToClipboard } from 'app/utils/purchaseData/copyToClipboard';
+import {authenticate} from '../shopify.server';
+
 
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -48,6 +50,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  const {admin, redirect} = await authenticate.admin(request);
+
   const { getShopDomain } = await import('app/utils/shopify/getShopDomain');
   const shopDomain = await getShopDomain(request);
 

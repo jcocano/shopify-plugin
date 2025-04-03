@@ -24,6 +24,7 @@ export async function loader({ request, }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  const {admin, redirect} = await authenticate.admin(request);
   const shopDomain = await getShopDomain(request);
   const formData = await request.formData();
   const storeSettingsDataString = formData.get("storeSettings");

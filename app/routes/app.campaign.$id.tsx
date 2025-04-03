@@ -77,6 +77,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  const {admin, redirect} = await authenticate.admin(request);
+
   try {
     const shopDomain = await getShopDomain(request);
     const formData = await request.formData();
