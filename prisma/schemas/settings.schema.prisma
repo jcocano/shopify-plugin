@@ -1,0 +1,24 @@
+enum ButtonUiEnum {
+  BLACK
+  BLUE
+  WHITE
+}
+
+enum LoaderUiEnum {
+  BLACK
+  BLUE
+  WHITE
+}
+
+model Settings {
+  id            String        @id @default(uuid()) @map("_id")
+  shop          String        @unique
+  api_key       String
+  app_id        String
+  timezone      String
+  button_ui     ButtonUiEnum
+  loader_ui     LoaderUiEnum
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  @@map("store_settings")
+}

@@ -1,0 +1,13 @@
+model LineItem {
+  id                    Int          @id @default(autoincrement())
+  purchase_data_id      String
+  product_name          String
+  quantity              Int
+  used_contract         String?
+  used_token_id         String?
+  purchase_data         PurchaseData  @relation("PurchaseDataToLineItems", fields: [purchase_data_id], references: [id])
+  created_at            DateTime    @default(now())
+  updated_at            DateTime    @updatedAt
+
+  @@map("line_items")
+}

@@ -1,0 +1,24 @@
+{% schema %}
+{
+  "name": "tokenproof",
+  "settings": [],
+  "target": "section"
+}
+{% endschema %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ 'styles-tokenproof-button.css' | asset_url }}?v:0.0.2ß">
+
+{% if product %}
+  <script>
+    window.productId = "{{ product.id }}";
+    window.variantId = "{{ product.selected_or_first_available_variant.id }}";
+  </script>
+  <div class="tokenproof-container" id="tokenproof-container-{{ block.id }}">
+    <div id="tokenproof-app"></div>
+  </div>
+{% endif %}
+
+<script type="module" src="{{ 'app.js' | asset_url }}"></script>

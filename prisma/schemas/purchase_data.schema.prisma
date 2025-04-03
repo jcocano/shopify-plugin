@@ -1,0 +1,28 @@
+enum OrderStatusEnum {
+  PENDING
+  PAID
+  FULFILLED
+  CANCELED
+  REDEEMED
+}
+
+model PurchaseData {
+  id                        String           @id @default(uuid())
+  shop                      String
+  shopify_order_id          String           @unique
+  order_date                DateTime
+  order_status              OrderStatusEnum
+  total_amount              Float
+  campaign_id               String
+  campaign                  Campaign          @relation(fields: [campaign_id], references: [id])
+  line_items                LineItem[]        @relation("PurchaseDataToLineItems")
+  user_session_id           String
+  user_session_nonce        String
+  user_did                  String
+  user_wallet_address       String
+  user_wallet               Wallet            @relation(fields: [user_wallet_address], references: [wallet_address])
+  created_at                DateTime          @default(now())
+  updated_at                DateTime          @updatedAt
+
+  @@map("purchase_data")
+}

@@ -1,0 +1,9 @@
+model Wallet {
+  id              Int             @id @default(autoincrement())
+  wallet_address  String          @unique
+  linked_did      String
+  did             Did             @relation(fields: [linked_did], references: [identifier])
+  purchase_datas  PurchaseData[]  
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+}

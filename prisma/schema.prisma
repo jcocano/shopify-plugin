@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CampaignEnum {
+  EXCLUSIVE_PRODUCTS
+  TOKEN_REDEMPTION
+  SPECIAL_DISCOUNT
+}
+
+enum DiscountEnum {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum EvaluatedConditionEnum {
+  ALL
+  ANY
+}
+
+enum ProductSelectionEnum {
+  ALL_PRODUCTS
+  SELECTED_PRODUCT
+}
+
+enum StatusEnum {
+  ACTIVE
+  ARCHIVED
+  DRAFT
+  INACTIVE
+}
+
+model Campaign {
+  id                      String                  @id @default(uuid()) @map("_id")
+  shop                    String
+  title                   String
+  auth_policy             String
+  type                    CampaignEnum
+  discount_type           DiscountEnum
+  discount                Float
+  offer_description       String?
+  is_active               Boolean                 @default(false)
+  start_date              DateTime
+  end_date                DateTime
+  status                  StatusEnum              @default(DRAFT)
+  is_auto_archive         Boolean                 @default(false)
+  product_selection_type  ProductSelectionEnum
+  selected_products       CampaignSelectedProduct[]
+  evaluated_condition     EvaluatedConditionEnum
+  conditions              CampaignCondition[]
+  product_purchase_limit  Int?
+  campaign_purchases      PurchaseData[]
+  created_at              DateTime                @default(now())
+  updated_at              DateTime                @updatedAt
+
+  @@map("campaigns")
+}
+
+
+enum OperatorEnum {
+  INCLUDES
+  EXCLUDES    
+}
+
+enum ConditionTypeEnum {
+  OWNS_TOKEN
+  WALLET_LIST
+}
+
+model CampaignCondition {
+  id           Int                @id @default(autoincrement())
+  campaignId   String             @map("campaign_id")
+  campaign     Campaign           @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  type         ConditionTypeEnum
+  operator     OperatorEnum
+  rule_name    String
+  tokenIds     String[]
+  tokenQty     Int?
+  blockchain   String?
+  contract     String?
+  wallet       String[]
+  created_at   DateTime           @default(now())
+  updated_at   DateTime           @updatedAt
+  
+  @@map("campaign_conditions")
+  @@unique([campaignId, rule_name])
+}
+
+
+model CampaignSelectedProduct {
+  id            Int    @id @default(autoincrement())
+  product_id    String
+  campaignId    String
+  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  title         String
+  image_url     String?
+  variantId     String?   
+  variantTitle  String? 
+  created_at    DateTime  @default(now())
+
+  @@map("campaign_selected_products")
+  @@unique([product_id, campaignId, variantId])
+}
+
+
+model Did {
+  id            String    @id @default(uuid())
+  identifier    String    @unique
+  wallets       Wallet[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+
+model LineItem {
+  id                    Int          @id @default(autoincrement())
+  purchase_data_id      String
+  product_name          String
+  quantity              Int
+  used_contract         String?
+  used_token_id         String?
+  purchase_data         PurchaseData  @relation("PurchaseDataToLineItems", fields: [purchase_data_id], references: [id])
+  created_at            DateTime    @default(now())
+  updated_at            DateTime    @updatedAt
+
+  @@map("line_items")
+}
+
+
+enum OrderStatusEnum {
+  PENDING
+  PAID
+  FULFILLED
+  CANCELED
+  REDEEMED
+}
+
+model PurchaseData {
+  id                        String           @id @default(uuid())
+  shop                      String
+  shopify_order_id          String           @unique
+  order_date                DateTime
+  order_status              OrderStatusEnum
+  total_amount              Float
+  campaign_id               String
+  campaign                  Campaign          @relation(fields: [campaign_id], references: [id])
+  line_items                LineItem[]        @relation("PurchaseDataToLineItems")
+  user_session_id           String
+  user_session_nonce        String
+  user_did                  String
+  user_wallet_address       String
+  user_wallet               Wallet            @relation(fields: [user_wallet_address], references: [wallet_address])
+  created_at                DateTime          @default(now())
+  updated_at                DateTime          @updatedAt
+
+  @@map("purchase_data")
+}
+
+
+enum ButtonUiEnum {
+  BLACK
+  BLUE
+  WHITE
+}
+
+enum LoaderUiEnum {
+  BLACK
+  BLUE
+  WHITE
+}
+
+model Settings {
+  id            String        @id @default(uuid()) @map("_id")
+  shop          String        @unique
+  api_key       String
+  app_id        String
+  timezone      String
+  button_ui     ButtonUiEnum
+  loader_ui     LoaderUiEnum
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  @@map("store_settings")
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+
+enum Status {
+  AUTHENTICATED
+  PENDING
+  REJECTED
+}
+
+model StorefrontSession {
+  id                        String                  @id @default(uuid()) @map("_id")
+  shop                      String
+  app_id                    String
+  account                   String
+  nonce                     String
+  client_ip                 String
+  status                    Status
+  did                       String
+  shopify_session_id        String
+  holdings                  Json?
+  created_at                DateTime                @default(now())
+  updated_at                DateTime                @updatedAt
+  @@map("storefront_sessions")
+}
+
+model Wallet {
+  id              Int             @id @default(autoincrement())
+  wallet_address  String          @unique
+  linked_did      String
+  did             Did             @relation(fields: [linked_did], references: [identifier])
+  purchase_datas  PurchaseData[]  
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+}
+
+

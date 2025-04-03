@@ -1,0 +1,53 @@
+enum CampaignEnum {
+  EXCLUSIVE_PRODUCTS
+  TOKEN_REDEMPTION
+  SPECIAL_DISCOUNT
+}
+
+enum DiscountEnum {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum EvaluatedConditionEnum {
+  ALL
+  ANY
+}
+
+enum ProductSelectionEnum {
+  ALL_PRODUCTS
+  SELECTED_PRODUCT
+}
+
+enum StatusEnum {
+  ACTIVE
+  ARCHIVED
+  DRAFT
+  INACTIVE
+}
+
+model Campaign {
+  id                      String                  @id @default(uuid()) @map("_id")
+  shop                    String
+  title                   String
+  auth_policy             String
+  type                    CampaignEnum
+  discount_type           DiscountEnum
+  discount                Float
+  offer_description       String?
+  is_active               Boolean                 @default(false)
+  start_date              DateTime
+  end_date                DateTime
+  status                  StatusEnum              @default(DRAFT)
+  is_auto_archive         Boolean                 @default(false)
+  product_selection_type  ProductSelectionEnum
+  selected_products       CampaignSelectedProduct[]
+  evaluated_condition     EvaluatedConditionEnum
+  conditions              CampaignCondition[]
+  product_purchase_limit  Int?
+  campaign_purchases      PurchaseData[]
+  created_at              DateTime                @default(now())
+  updated_at              DateTime                @updatedAt
+
+  @@map("campaigns")
+}

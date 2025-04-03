@@ -1,0 +1,28 @@
+enum OperatorEnum {
+  INCLUDES
+  EXCLUDES    
+}
+
+enum ConditionTypeEnum {
+  OWNS_TOKEN
+  WALLET_LIST
+}
+
+model CampaignCondition {
+  id           Int                @id @default(autoincrement())
+  campaignId   String             @map("campaign_id")
+  campaign     Campaign           @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  type         ConditionTypeEnum
+  operator     OperatorEnum
+  rule_name    String
+  tokenIds     String[]
+  tokenQty     Int?
+  blockchain   String?
+  contract     String?
+  wallet       String[]
+  created_at   DateTime           @default(now())
+  updated_at   DateTime           @updatedAt
+  
+  @@map("campaign_conditions")
+  @@unique([campaignId, rule_name])
+}

@@ -1,0 +1,14 @@
+model CampaignSelectedProduct {
+  id            Int    @id @default(autoincrement())
+  product_id    String
+  campaignId    String
+  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  title         String
+  image_url     String?
+  variantId     String?   
+  variantTitle  String? 
+  created_at    DateTime  @default(now())
+
+  @@map("campaign_selected_products")
+  @@unique([product_id, campaignId, variantId])
+}

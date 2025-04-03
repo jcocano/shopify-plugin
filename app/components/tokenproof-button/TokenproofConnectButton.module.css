@@ -1,0 +1,66 @@
+.buttonBase {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 16px;
+  font-weight: 500;
+  border: 2px solid;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+  justify-content: center;
+  width: 100%;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+}
+
+.icon svg path {
+  transition: fill 0.2s ease;
+}
+
+.buttonBlue {
+  background-color: white;
+  color: black;
+  border-color: black;
+}
+
+.buttonBlue:hover {
+  background-color: #e6f0ff;
+}
+
+.buttonBlue:hover .icon svg path {
+  fill: #1e40af;
+}
+
+.buttonBlack {
+  background-color: white;
+  color: black;
+  border-color: black;
+}
+
+.buttonBlack:hover {
+  background-color: #f0f0f0;
+}
+
+.buttonBlack:hover .icon svg path {
+  fill: #4b5563;
+}
+
+.buttonWhite {
+  background-color: black;
+  color: white;
+  border-color: white;
+}
+
+.buttonWhite:hover {
+  background-color: #333;
+}
+
+.buttonWhite:hover .icon svg path {
+  fill: #e5e7eb;
+}

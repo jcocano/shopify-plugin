@@ -1,0 +1,21 @@
+enum Status {
+  AUTHENTICATED
+  PENDING
+  REJECTED
+}
+
+model StorefrontSession {
+  id                        String                  @id @default(uuid()) @map("_id")
+  shop                      String
+  app_id                    String
+  account                   String
+  nonce                     String
+  client_ip                 String
+  status                    Status
+  did                       String
+  shopify_session_id        String
+  holdings                  Json?
+  created_at                DateTime                @default(now())
+  updated_at                DateTime                @updatedAt
+  @@map("storefront_sessions")
+}
