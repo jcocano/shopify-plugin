@@ -1,4 +1,3 @@
-// app/models/purchaseData.server.ts
 import db from "../../db.server";
 import { randomUUID } from "crypto";
 import { PurchaseDataDto } from "../dtos/purchaseData/purchaseData.dto";

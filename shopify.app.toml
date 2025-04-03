@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "2c0bcde2090899f3759523b39486311d"
-application_url = "https://wait-armenia-annotation-introductory.trycloudflare.com"
+application_url = "https://shopify-plugin-vebr.onrender.com"
 embedded = true
 name = "tokenproof-plugin"
 handle = "tokenproof-plugin"
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://wait-armenia-annotation-introductory.trycloudflare.com/auth/callback",
-  "https://wait-armenia-annotation-introductory.trycloudflare.com/auth/shopify/callback",
-  "https://wait-armenia-annotation-introductory.trycloudflare.com/api/auth/callback"
+  "https://shopify-plugin-vebr.onrender.com/auth/callback",
+  "https://shopify-plugin-vebr.onrender.com/auth/shopify/callback",
+  "https://shopify-plugin-vebr.onrender.com/api/auth/callback"
 ]
 
 [pos]
