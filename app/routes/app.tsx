@@ -26,6 +26,7 @@ export default function App() {
         </Link>
         <Link to="/app/campaigns">All Campaigns</Link>
         <Link to="/app/campaign/new">Create Campaigns</Link>
+        <Link to="/app/purchases">Purchase History</Link>
         <Link to="/app/settings">Settings</Link>
       </NavMenu>
       <Outlet />
