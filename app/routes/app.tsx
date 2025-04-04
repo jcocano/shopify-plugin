@@ -17,8 +17,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const storeData = await query.json();
   const shopifyData = storeData.data.shop;
 
-  console.log("shopifyData: ", shopifyData)
-
   const settings = await storeOnboarding(shopifyData.myshopifyDomain, shopifyData.email);
   const isTokenproofStoreEnroll = () => !!settings.api_key;
 

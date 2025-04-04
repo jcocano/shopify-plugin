@@ -10,10 +10,7 @@ import { useState, useCallback, } from "react";
 import { TimezoneSelector } from "app/components/settings/timezone/TimezoneSelector";
 import { CustomizationSettings } from "app/components/settings/theme/CustomizationSettings";
 import { authenticate } from "app/shopify.server";
-
-interface ErrorBoundaryProps {
-  error: Error;
-}
+import { ErrorBoundary } from "app/components/ErrorBoundary";
 
 export async function loader({ request, }: LoaderFunctionArgs) {
   console.log("settings loader")
@@ -116,26 +113,4 @@ export default function Settings() {
   )
 }
 
-export function ErrorBoundary({ error }: ErrorBoundaryProps) {
-  console.error("ErrorBoundary caught an error:", error);
-
-  return (
-    <Page title="Error">
-      <BlockStack gap="400">
-        <h1>Something went wrong</h1>
-        <p>
-          An unexpected error occurred. Please try reloading the page. If the issue persists, contact support.
-        </p>
-        <div>
-          <strong>Error Message:</strong> {error.message}
-        </div>
-        {error.stack && (
-          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#555" }}>
-            {error.stack}
-          </pre>
-        )}
-        <Button onClick={() => window.location.reload()}>Reload Page</Button>
-      </BlockStack>
-    </Page>
-  );
-}
+export { ErrorBoundary };
