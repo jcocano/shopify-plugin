@@ -13,40 +13,52 @@ import { authenticate } from "app/shopify.server";
 import { ErrorBoundary } from "app/components/ErrorBoundary";
 
 export async function loader({ request, }: LoaderFunctionArgs) {
-  console.log("settings loader")
-  const { admin } = await authenticate.admin(request);
-  console.log("settings authenticate")
-  
-  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-  const storeData = await query.json();
-  const shopifyDomain = storeData.data.shop.myshopifyDomain;
+  try {
+    console.log("settings loader")
+    const { admin } = await authenticate.admin(request);
+    console.log("settings authenticate")
+    
+    const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+    const storeData = await query.json();
+    const shopifyDomain = storeData.data.shop.myshopifyDomain;
 
-  const storeSettings =  await getStoreSettings(shopifyDomain)
-  
-  return ({ storeSettings: storeSettings })
+    const storeSettings = await getStoreSettings(shopifyDomain)
+    
+    return ({ storeSettings: storeSettings })
+  } catch (error) {
+    console.error("Error in settings loader:", error);
+    // Return a minimal response that won't break the app
+    return { storeSettings: null };
+  }
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  console.log("settings action")
-  const {admin, redirect} = await authenticate.admin(request);
-  console.log("settings action authenticate")
+  try {
+    console.log("settings action")
+    const {admin, redirect} = await authenticate.admin(request);
+    console.log("settings action authenticate")
 
-  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-  const storeData = await query.json();
-  const shopifyDomain = storeData.data.shop.myshopifyDomain;
+    const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+    const storeData = await query.json();
+    const shopifyDomain = storeData.data.shop.myshopifyDomain;
 
-  const formData = await request.formData();
-  const storeSettingsDataString = formData.get("storeSettings");
+    const formData = await request.formData();
+    const storeSettingsDataString = formData.get("storeSettings");
 
-  if (!storeSettingsDataString || typeof storeSettingsDataString !== "string") {
-    throw new Error("Failed to get store settings data");
+    if (!storeSettingsDataString || typeof storeSettingsDataString !== "string") {
+      throw new Error("Failed to get store settings data");
+    }
+
+    const storeSettingsData = JSON.parse(storeSettingsDataString) as Partial<StoreSettingsDto>;
+
+    await updateStoreSettings(shopifyDomain, storeSettingsData);
+
+    return redirect("/app/settings");
+  } catch (error) {
+    console.error("Error in settings action:", error);
+    // Return a minimal response that won't break the app
+    return redirect("/app/settings");
   }
-
-  const storeSettingsData = JSON.parse(storeSettingsDataString) as Partial<StoreSettingsDto>;
-
-  await updateStoreSettings(shopifyDomain, storeSettingsData);
-
-  return redirect("/app/settings");
 }
 
 export default function Settings() {
