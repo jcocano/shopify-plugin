@@ -1,6 +1,6 @@
 import { useFetcher, useLoaderData, useSearchParams } from '@remix-run/react';
 import { ActionFunctionArgs, LoaderFunctionArgs, redirect } from '@remix-run/node';
-import { Page, LegacyCard, useSetIndexFiltersMode, IndexFiltersMode } from '@shopify/polaris';
+import { Page, LegacyCard, useSetIndexFiltersMode, IndexFiltersMode, BlockStack, Button } from '@shopify/polaris';
 import { useState, useCallback } from 'react';
 import { getTransactionFiltersConfig } from 'app/components/campaings/products/TransactionFiltersConfig';
 import { ClientOnly } from 'app/components/ClientOnly';
@@ -15,23 +15,28 @@ import { purchaseDataShortOptions } from 'app/utils/constants/purchaseDataShortO
 import { exportToCSV } from 'app/utils/misc/exportToCSV';
 import { copyToClipboard } from 'app/utils/purchaseData/copyToClipboard';
 import {authenticate} from '../shopify.server';
+import { deletePurchaseData } from 'app/models/purchases/PurchaseData.server';
 
-
+interface ErrorBoundaryProps {
+  error: Error;
+}
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { session, redirect } = await authenticate.admin(request);
-
-  const { getShopDomain } = await import('app/utils/shopify/getShopDomain');
-  const shopDomain = await getShopDomain(request);
+  console.log("campaign editor loader")
+  const { admin } = await authenticate.admin(request);
+  console.log("campaign edito authenticate")
+  
+  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+  const storeData = await query.json();
+  const shopifyDomain = storeData.data.shop.myshopifyDomain;
 
   const url = new URL(request.url);
   const offset = Number(url.searchParams.get('offset')) || 0;
   const size = Number(url.searchParams.get('size')) || 25;
 
   const { getPurchaseDatas } = await import('app/models/purchases/PurchaseData.server');
-  const { result, filterRecords, totalRecords } = await getPurchaseDatas(shopDomain, size, offset);
+  const { result, filterRecords, totalRecords } = await getPurchaseDatas(shopifyDomain, size, offset);
 
-  // Separamos los datos en tokenRedemptions y campaignPurchases
   const { tokenRedemptions, campaignPurchases } = result.reduce(
     (acc, purchase) => {
       if (purchase.campaign.type === 'TOKEN_REDEMPTION') {
@@ -48,10 +53,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  console.log("purchases action")
   const {admin, redirect} = await authenticate.admin(request);
-
-  const { getShopDomain } = await import('app/utils/shopify/getShopDomain');
-  const shopDomain = await getShopDomain(request);
+  console.log("purchases action authenticate")
+  
+  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+  const storeData = await query.json();
+  const shopifyDomain = storeData.data.shop.myshopifyDomain;
 
   const formData = await request.formData();
   const id = formData.get('id');
@@ -60,8 +68,7 @@ export async function action({ request }: ActionFunctionArgs) {
     throw new Response('Invalid purchase ID', { status: 400 });
   }
 
-  const { deletePurchaseData } = await import('app/models/purchases/PurchaseData.server');
-  await deletePurchaseData(shopDomain, id);
+  await deletePurchaseData(shopifyDomain, id);
 
   return redirect('/app/purchase-history');
 }
@@ -211,6 +218,30 @@ export default function Purchases() {
         onClose={() => setModalOpen(false)}
         copyToClipboard={() => copyToClipboard(selectedPurchase)}
       />
+    </Page>
+  );
+}
+
+export function ErrorBoundary({ error }: ErrorBoundaryProps) {
+  console.error("ErrorBoundary caught an error:", error);
+
+  return (
+    <Page title="Error">
+      <BlockStack gap="400">
+        <h1>Something went wrong</h1>
+        <p>
+          An unexpected error occurred. Please try reloading the page. If the issue persists, contact support.
+        </p>
+        <div>
+          <strong>Error Message:</strong> {error.message}
+        </div>
+        {error.stack && (
+          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#555" }}>
+            {error.stack}
+          </pre>
+        )}
+        <Button onClick={() => window.location.reload()}>Reload Page</Button>
+      </BlockStack>
     </Page>
   );
 }

@@ -37,5 +37,5 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
- return
+  return new Response(JSON.stringify({ message: "ok" }), { status: 200 })
 }

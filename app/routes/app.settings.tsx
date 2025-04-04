@@ -11,31 +11,43 @@ import { TimezoneSelector } from "app/components/settings/timezone/TimezoneSelec
 import { CustomizationSettings } from "app/components/settings/theme/CustomizationSettings";
 import { authenticate } from "app/shopify.server";
 
+interface ErrorBoundaryProps {
+  error: Error;
+}
+
 export async function loader({ request, }: LoaderFunctionArgs) {
-  const { session, redirect } = await authenticate.admin(request);
+  console.log("settings loader")
+  const { admin } = await authenticate.admin(request);
+  console.log("settings authenticate")
+  
+  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+  const storeData = await query.json();
+  const shopifyDomain = storeData.data.shop.myshopifyDomain;
 
-  const shopDomain = await getShopDomain(request)
-  const storeSettings =  await getStoreSettings(shopDomain)
-
-  console.log("store settings domain: ", shopDomain)
-  console.log("store settings: ", storeSettings)
-
+  const storeSettings =  await getStoreSettings(shopifyDomain)
+  
   return ({ storeSettings: storeSettings })
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  console.log("settings action")
   const {admin, redirect} = await authenticate.admin(request);
-  const shopDomain = await getShopDomain(request);
+  console.log("settings action authenticate")
+
+  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+  const storeData = await query.json();
+  const shopifyDomain = storeData.data.shop.myshopifyDomain;
+
   const formData = await request.formData();
   const storeSettingsDataString = formData.get("storeSettings");
 
   if (!storeSettingsDataString || typeof storeSettingsDataString !== "string") {
-    throw new Error("Faltan los datos de storeSettings");
+    throw new Error("Failed to get store settings data");
   }
 
   const storeSettingsData = JSON.parse(storeSettingsDataString) as Partial<StoreSettingsDto>;
 
-  await updateStoreSettings(shopDomain, storeSettingsData);
+  await updateStoreSettings(shopifyDomain, storeSettingsData);
 
   return redirect("/app/settings");
 }
@@ -104,19 +116,25 @@ export default function Settings() {
   )
 }
 
-export function ErrorBoundary({ error }: { error: Error }) {
+export function ErrorBoundary({ error }: ErrorBoundaryProps) {
   console.error("ErrorBoundary caught an error:", error);
+
   return (
     <Page title="Error">
       <BlockStack gap="400">
-        <h1>Algo salió mal</h1>
-        <p>{error.message}</p>
+        <h1>Something went wrong</h1>
+        <p>
+          An unexpected error occurred. Please try reloading the page. If the issue persists, contact support.
+        </p>
+        <div>
+          <strong>Error Message:</strong> {error.message}
+        </div>
         {error.stack && (
           <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#555" }}>
             {error.stack}
           </pre>
         )}
-        <Button onClick={() => window.location.reload()}>Recargar página</Button>
+        <Button onClick={() => window.location.reload()}>Reload Page</Button>
       </BlockStack>
     </Page>
   );

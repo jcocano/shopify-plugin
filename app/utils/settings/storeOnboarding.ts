@@ -11,6 +11,8 @@ export async function storeOnboarding(shopDomain: string, email?: string): Promi
       email,
     };
 
+    console.log("onboardingPayload: ", onboardingPayload)
+
     const response = await fetch(`${process.env.TOKENPROOF_API_URL}/shopify/onboarding`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

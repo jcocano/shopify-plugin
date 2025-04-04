@@ -6,17 +6,27 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
 import { authenticate } from "../shopify.server";
+import { storeOnboarding } from "app/utils/settings/storeOnboarding";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { admin } = await authenticate.admin(request);
+  // store data
+  const query = await admin.graphql(`{ shop { email myshopifyDomain } }`);
+  const storeData = await query.json();
+  const shopifyData = storeData.data.shop;
 
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  console.log("shopifyData: ", shopifyData)
+
+  const settings = await storeOnboarding(shopifyData.myshopifyDomain, shopifyData.email);
+  const isTokenproofStoreEnroll = () => !!settings.api_key;
+
+  return { apiKey: process.env.SHOPIFY_API_KEY || "", isTokenproofStoreEnroll };
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
+  const { apiKey, } = useLoaderData<typeof loader>();
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>

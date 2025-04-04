@@ -9,47 +9,56 @@ import { CampaingsEmptySatate } from 'app/components/campaings/CampaignsEmptySat
 import { deleteCampaignOnTokenproof } from 'app/utils/tokenproof/deleteCampaignOnTokenproof';
 import { authenticate } from 'app/shopify.server';
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { session, redirect } = await authenticate.admin(request);
+interface ErrorBoundaryProps {
+  error: Error;
+}
 
-  const shopDomain = await getShopDomain(request);
-  const campaigns = await getCampaigns(shopDomain);
+export async function loader({ request }: LoaderFunctionArgs) {
+  console.log("campaigns loader")
+  const { admin } = await authenticate.admin(request);
+  console.log("campaigns authenticate")
+  
+  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+  const storeData = await query.json();
+  const shopifyDomain = storeData.data.shop.myshopifyDomain;
+ 
+  const campaigns = await getCampaigns(shopifyDomain);
   return campaigns;
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  console.log("campaigns action")
   const {admin, redirect} = await authenticate.admin(request);
+  console.log("campaigns action authenticate")
+  
+  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+  const storeData = await query.json();
+  const shopifyDomain = storeData.data.shop.myshopifyDomain;
 
   const formData = await request.formData();
   const campaignId = String(formData.get('id'));
   const campaignAction = String(formData.get('action'));
-  const shopDomain = await getShopDomain(request);
 
   if (!campaignId || !campaignAction) {
-    throw new Response("Missing id or action in form data", { status: 400 });
+    throw new Error("Missing id or action in form data");
   }
 
-  try {
-    switch (campaignAction) {
-      case "activate":
-        await updateCampaign(shopDomain, campaignId, { is_active: true });
-        break;
-      case "pause":
-        await updateCampaign(shopDomain, campaignId, { is_active: false });
-        break;
-      case "delete":
-        await deleteCampaignOnTokenproof(shopDomain, campaignId);
-        await deleteCampaign(shopDomain, campaignId);
-        break;
-      default:
-        throw new Response("Invalid action", { status: 400 });
-    }
-    
-    return redirect("/app/campaigns");
-  } catch (error) {
-    console.error("Error in campaign action:", error);
-    throw error;
+  switch (campaignAction) {
+    case "activate":
+      await updateCampaign(shopifyDomain, campaignId, { is_active: true });
+      break;
+    case "pause":
+      await updateCampaign(shopifyDomain, campaignId, { is_active: false });
+      break;
+    case "delete":
+      await deleteCampaignOnTokenproof(shopifyDomain, campaignId);
+      await deleteCampaign(shopifyDomain, campaignId);
+      break;
+    default:
+      throw new Error("Invalid action");
   }
+    
+  return redirect("/app/campaigns");
 }
 
 export default function Campaign() {
@@ -202,6 +211,30 @@ export default function Campaign() {
             </BlockStack>
           </Card>
         ))}
+      </BlockStack>
+    </Page>
+  );
+}
+
+export function ErrorBoundary({ error }: ErrorBoundaryProps) {
+  console.error("ErrorBoundary caught an error:", error);
+
+  return (
+    <Page title="Error">
+      <BlockStack gap="400">
+        <h1>Something went wrong</h1>
+        <p>
+          An unexpected error occurred. Please try reloading the page. If the issue persists, contact support.
+        </p>
+        <div>
+          <strong>Error Message:</strong> {error.message}
+        </div>
+        {error.stack && (
+          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#555" }}>
+            {error.stack}
+          </pre>
+        )}
+        <Button onClick={() => window.location.reload()}>Reload Page</Button>
       </BlockStack>
     </Page>
   );

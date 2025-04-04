@@ -34,8 +34,6 @@ import { CampaignDto } from "app/models/dtos/campaigns/Campaign.dto";
 import { getCampaign } from "app/models/campaigns/Campaigns.server";
 
 import { normalizeConditions, normalizeSelectedProducts } from "app/utils/campaign/normalizeData";
-import { getShopDomain } from "app/utils/shopify/getShopDomain";
-
 import { CampaignDetails } from "app/components/campaings/details/CampaignDetails";
 import { ConditionDetails } from "app/components/campaings/conditions/ConditionDetails";
 import { ProductDetails } from "app/components/campaings/products/ProductDetails";
@@ -48,11 +46,20 @@ interface FetcherData {
   error?: string;
 }
 
-export async function loader({ request, params }: LoaderFunctionArgs) {
-  const { session, redirect } = await authenticate.admin(request);
+interface ErrorBoundaryProps {
+  error: Error;
+}
 
+export async function loader({ request, params }: LoaderFunctionArgs) {
+  console.log("campaign editor loader")
+  const { admin } = await authenticate.admin(request);
+  console.log("campaign edito authenticate")
+  
+  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+  const storeData = await query.json();
+  const shopifyDomain = storeData.data.shop.myshopifyDomain;
+  
   try {
-    const shopDomain = await getShopDomain(request);
     if (!params.id || params.id === "new") {
       return {
         isNew: true,
@@ -60,7 +67,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       };
     }
 
-    const campaign = await getCampaign(shopDomain, params.id);
+    const campaign = await getCampaign(shopifyDomain, params.id);
     return {
       isNew: false,
       campaign
@@ -77,41 +84,20 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  console.log("campaign editor action")
   const {admin, redirect} = await authenticate.admin(request);
+  console.log("campaign editor action authenticate")
+  
+  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
+  const storeData = await query.json();
+  const shopifyDomain = storeData.data.shop.myshopifyDomain;
 
-  try {
-    const shopDomain = await getShopDomain(request);
-    const formData = await request.formData();
-    const campaignData = JSON.parse(formData.get("campaign") as string);
+  const formData = await request.formData();
+  const campaignData = JSON.parse(formData.get("campaign") as string);
 
-    await syncCampaignData(campaignData, shopDomain);
+  await syncCampaignData(campaignData, shopifyDomain);
 
-    return new Response(
-      JSON.stringify({ redirect: "/app/campaigns" }),
-      { 
-        status: 200,
-        headers: { 
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-        }
-      }
-    );
-  } catch (error) {
-    console.error("Error in campaign action:", error);
-    if (error instanceof Response && error.status === 302) {
-      throw error;
-    }
-    throw new Response(
-      JSON.stringify({ error: "Failed to save campaign" }),
-      { 
-        status: 500, 
-        headers: { 
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-        } 
-      }
-    );
-  }
+  return redirect("/app/campaigns");
 }
 
 export default function CampaignEditor() {
@@ -222,6 +208,30 @@ export default function CampaignEditor() {
             </Button>
           </ButtonGroup>
         </InlineStack>
+      </BlockStack>
+    </Page>
+  );
+}
+
+export function ErrorBoundary({ error }: ErrorBoundaryProps) {
+  console.error("ErrorBoundary caught an error:", error);
+
+  return (
+    <Page title="Error">
+      <BlockStack gap="400">
+        <h1>Something went wrong</h1>
+        <p>
+          An unexpected error occurred. Please try reloading the page. If the issue persists, contact support.
+        </p>
+        <div>
+          <strong>Error Message:</strong> {error.message}
+        </div>
+        {error.stack && (
+          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#555" }}>
+            {error.stack}
+          </pre>
+        )}
+        <Button onClick={() => window.location.reload()}>Reload Page</Button>
       </BlockStack>
     </Page>
   );
