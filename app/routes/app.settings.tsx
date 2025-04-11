@@ -1,46 +1,30 @@
 import { ButtonUiEnum, LoaderUiEnum } from "@prisma/client";
-import { ActionFunctionArgs, LoaderFunctionArgs, redirect } from "@remix-run/node";
-import { useFetcher, useLoaderData, useNavigate } from "@remix-run/react";
-import { useBreakpoints, Page, BlockStack, Divider, InlineStack, ButtonGroup, Button } from "@shopify/polaris";
+import { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs, json } from "@remix-run/node";
+import { useFetcher, useLoaderData, useNavigate, useRouteError } from "@remix-run/react";
+import { useBreakpoints, Page, BlockStack, Divider, InlineStack, ButtonGroup, Button, Banner } from "@shopify/polaris";
 import { StoreSettingsDto } from "app/models/dtos/settings/Settings.dto";
 import { getStoreSettings, updateStoreSettings } from "app/models/settings/Settings.server";
-import { getShopDomain } from "app/utils/shopify/getShopDomain";
-import { useState, useCallback, } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 import { TimezoneSelector } from "app/components/settings/timezone/TimezoneSelector";
 import { CustomizationSettings } from "app/components/settings/theme/CustomizationSettings";
 import { authenticate } from "app/shopify.server";
-import { ErrorBoundary } from "app/components/ErrorBoundary";
+import { ErrorBoundary as CustomErrorBoundary } from "app/components/ErrorBoundary";
+import { boundary } from "@shopify/shopify-app-remix/server";
 
 export async function loader({ request, }: LoaderFunctionArgs) {
-  try {
-    console.log("settings loader")
-    const { admin } = await authenticate.admin(request);
-    console.log("settings authenticate")
-    
-    const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-    const storeData = await query.json();
-    const shopifyDomain = storeData.data.shop.myshopifyDomain;
+  console.log("settings loader")
+  const { session } = await authenticate.admin(request);
 
-    const storeSettings = await getStoreSettings(shopifyDomain)
-    
-    return ({ storeSettings: storeSettings })
-  } catch (error) {
-    console.error("Error in settings loader:", error);
-    // Return a minimal response that won't break the app
-    return { storeSettings: null };
-  }
+  const storeSettings = await getStoreSettings(session.shop)
+  
+  return ({ storeSettings: storeSettings })
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   try {
     console.log("settings action")
-    const {admin, redirect} = await authenticate.admin(request);
-    console.log("settings action authenticate")
-
-    const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-    const storeData = await query.json();
-    const shopifyDomain = storeData.data.shop.myshopifyDomain;
+    const { session } = await authenticate.admin(request);
 
     const formData = await request.formData();
     const storeSettingsDataString = formData.get("storeSettings");
@@ -51,19 +35,23 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const storeSettingsData = JSON.parse(storeSettingsDataString) as Partial<StoreSettingsDto>;
 
-    await updateStoreSettings(shopifyDomain, storeSettingsData);
+    await updateStoreSettings(session.shop, storeSettingsData);
 
-    return redirect("/app/settings");
+    return json({ success: true });
+  
   } catch (error) {
     console.error("Error in settings action:", error);
-    // Return a minimal response that won't break the app
-    return redirect("/app/settings");
+    return json({ success: false, error: "Failed to update settings" });
   }
 }
 
 export default function Settings() {
   const fetcher = useFetcher();
   const navigate = useNavigate();
+  
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [showErrorBanner, setShowErrorBanner] = useState(false);
+  const [showUpdatingBanner, setShowUpdatingBanner] = useState(false);
   
   const { storeSettings } = useLoaderData<typeof loader>();
   const { smUp } = useBreakpoints();
@@ -85,6 +73,35 @@ export default function Settings() {
     return presetSettings;
   });
 
+  useEffect(() => {
+    if (fetcher.state === "submitting") {
+      setShowSuccessBanner(false);
+      setShowErrorBanner(false);
+      setShowUpdatingBanner(true);
+    } else if (fetcher.state === "idle" && fetcher.data) {
+      console.log("Fetcher data:", fetcher.data);
+      setShowUpdatingBanner(false);
+      
+      const data = fetcher.data as { success?: boolean; error?: string };
+      
+      if (data.success) {
+        console.log("Showing success banner");
+        setShowSuccessBanner(true);
+        
+        setTimeout(() => {
+          setShowSuccessBanner(false);
+        }, 4000);
+      } else {
+        console.log("Showing error banner");
+        setShowErrorBanner(true);
+        
+        setTimeout(() => {
+          setShowErrorBanner(false);
+        }, 4000);
+      }
+    }
+  }, [fetcher.state, fetcher.data]);
+
   const handleSettingsChange = useCallback(
     async <K extends keyof StoreSettingsDto>(key: K, value: StoreSettingsDto[K]) => {
       setNewSettings((prev) => ({
@@ -96,6 +113,7 @@ export default function Settings() {
   );
 
   const handleSave = () => {
+    console.log("Saving settings...");
     const formData = new FormData();
     formData.append("storeSettings", JSON.stringify(newSettings));
     fetcher.submit(formData, { method: "post", action: `/app/settings` });
@@ -109,7 +127,41 @@ export default function Settings() {
         { content: "Cancel", onAction: () => navigate(`/app/settings`) }
       ]}
     >
-       <BlockStack gap={{ xs: "800", sm: "400" }}>
+      <BlockStack gap="400">
+        {showErrorBanner && (
+          <Banner
+            title="Error updating settings"
+            tone="critical"
+            onDismiss={() => setShowErrorBanner(false)}
+          >
+            An error occurred, please try again later
+          </Banner>
+        )}
+        
+        {showUpdatingBanner && (
+          <Banner
+            title="Updating settings"
+            tone="info"
+            onDismiss={() => setShowUpdatingBanner(false)}
+          >
+            Your settings are being updated...
+          </Banner>
+        )}
+        
+        {showSuccessBanner && (
+          <Banner
+            title="Settings updated"
+            tone="success"
+            onDismiss={() => setShowSuccessBanner(false)}
+          >
+            Your settings were successfully updated
+          </Banner>
+        )}
+      </BlockStack>
+      
+      <div style={{ marginTop: '16px' }}></div>
+      
+      <BlockStack gap={{ xs: "800", sm: "400" }}>
         <CustomizationSettings settingsData={newSettings} updateSettingsData={handleSettingsChange}/>
         {smUp ? <Divider /> : null}
         <TimezoneSelector settingsData={newSettings} updateSettingsData={handleSettingsChange}/>
@@ -125,4 +177,18 @@ export default function Settings() {
   )
 }
 
-export { ErrorBoundary };
+export function ErrorBoundary() {
+  const error = useRouteError();
+  console.error("Settings error boundary caught:", error);
+
+  return (
+    <CustomErrorBoundary 
+      error={error instanceof Error ? error : new Error("Unknown error")}
+      componentStack={error instanceof Error ? error.stack : undefined}
+    />
+  );
+};
+
+export const headers: HeadersFunction = (args) => {
+  return boundary.headers(args);
+};
