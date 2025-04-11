@@ -90,7 +90,7 @@ export default function App() {
               Home
             </Link>
             <Link to="/app/campaigns">All Campaigns</Link>
-            <Link to="/app/campaign/new">Create Campaigns</Link>
+            <Link to="/app/editor/campaign/new">Create Campaigns</Link>
             <Link to="/app/purchases">Purchase History</Link>
             <Link to="/app/settings">Settings</Link>
           </NavMenu>
