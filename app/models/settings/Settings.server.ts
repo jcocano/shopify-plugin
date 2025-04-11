@@ -1,7 +1,6 @@
 import db from '../../db.server';
 import { StoreSettingsDto } from '../dtos/settings/Settings.dto';
-import { ButtonUiEnum, LoaderUiEnum } from '../dtos/settings/Settings.enum'
-
+import { ButtonUiEnum, LoaderUiEnum } from '@prisma/client';
 
 export async function createStoreSettings(shop: string, data: StoreSettingsDto) {
   return await db.settings.create({ data })

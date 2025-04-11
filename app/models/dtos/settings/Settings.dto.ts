@@ -1,4 +1,5 @@
-import { ButtonUiEnum, LoaderUiEnum } from './Settings.enum';
+import { ButtonUiEnum, LoaderUiEnum } from "@prisma/client";
+
 
 export interface StoreSettingsDto {
   shop: string;

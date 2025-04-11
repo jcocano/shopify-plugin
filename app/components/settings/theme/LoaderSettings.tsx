@@ -1,7 +1,7 @@
+import { LoaderUiEnum } from "@prisma/client";
 import { Select } from "@shopify/polaris";
 import { Loader } from "app/components/loader/Loader";
 import { StoreSettingsDto } from "app/models/dtos/settings/Settings.dto";
-import { LoaderUiEnum } from "app/models/dtos/settings/Settings.enum";
 import { loaderUiStyles } from "app/utils/constants/settings";
 
 interface LoaderSettingsProps {
