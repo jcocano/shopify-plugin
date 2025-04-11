@@ -122,9 +122,17 @@ export default function Settings() {
   return (
     <Page
       title="Settings"
-      primaryAction={{ content: "Save", onAction: handleSave }}
+      primaryAction={{ 
+        content: "Save", 
+        onAction: handleSave,
+        disabled: fetcher.state === "submitting"
+      }}
       secondaryActions={[
-        { content: "Cancel", onAction: () => navigate(`/app/settings`) }
+        { 
+          content: "Cancel", 
+          onAction: () => navigate(`/app/settings`),
+          disabled: fetcher.state === "submitting"
+        }
       ]}
     >
       <BlockStack gap="400">
@@ -167,8 +175,21 @@ export default function Settings() {
         <TimezoneSelector settingsData={newSettings} updateSettingsData={handleSettingsChange}/>
         <InlineStack align="end">
           <ButtonGroup>
-            <Button variant="secondary" onClick={() => navigate(`/app/settings`)}>Cancel</Button>
-            <Button variant="primary" onClick={handleSave}>Save</Button>
+            <Button 
+              variant="secondary" 
+              onClick={() => navigate(`/app/settings`)}
+              disabled={fetcher.state === "submitting"}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleSave}
+              disabled={fetcher.state === "submitting"}
+              loading={fetcher.state === "submitting"}
+            >
+              Save
+            </Button>
           </ButtonGroup>
         </InlineStack>
         {smUp ? <Divider /> : null}
