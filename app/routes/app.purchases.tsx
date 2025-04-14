@@ -1,5 +1,5 @@
-import { useFetcher, useLoaderData, useSearchParams } from '@remix-run/react';
-import { ActionFunctionArgs, LoaderFunctionArgs, redirect } from '@remix-run/node';
+import { useFetcher, useLoaderData, useRouteError, useSearchParams } from '@remix-run/react';
+import { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs, redirect } from '@remix-run/node';
 import { Page, LegacyCard, useSetIndexFiltersMode, IndexFiltersMode, BlockStack, Button } from '@shopify/polaris';
 import { useState, useCallback } from 'react';
 import { getTransactionFiltersConfig } from 'app/components/campaings/products/TransactionFiltersConfig';
@@ -17,25 +17,18 @@ import { copyToClipboard } from 'app/utils/purchaseData/copyToClipboard';
 import {authenticate} from '../shopify.server';
 import { deletePurchaseData } from 'app/models/purchases/PurchaseData.server';
 
-interface ErrorBoundaryProps {
-  error: Error;
-}
+import { ErrorBoundary as CustomErrorBoundary } from "app/components/ErrorBoundary";
+import { boundary } from '@shopify/shopify-app-remix/server';
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  console.log("campaign editor loader")
-  const { admin } = await authenticate.admin(request);
-  console.log("campaign edito authenticate")
+  const { session } = await authenticate.admin(request);
   
-  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-  const storeData = await query.json();
-  const shopifyDomain = storeData.data.shop.myshopifyDomain;
-
   const url = new URL(request.url);
   const offset = Number(url.searchParams.get('offset')) || 0;
   const size = Number(url.searchParams.get('size')) || 25;
 
   const { getPurchaseDatas } = await import('app/models/purchases/PurchaseData.server');
-  const { result, filterRecords, totalRecords } = await getPurchaseDatas(shopifyDomain, size, offset);
+  const { result, filterRecords, totalRecords } = await getPurchaseDatas(session.shop, size, offset);
 
   const { tokenRedemptions, campaignPurchases } = result.reduce(
     (acc, purchase) => {
@@ -54,12 +47,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export async function action({ request }: ActionFunctionArgs) {
   console.log("purchases action")
-  const {admin, redirect} = await authenticate.admin(request);
+  const { redirect, session} = await authenticate.admin(request);
   console.log("purchases action authenticate")
-  
-  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-  const storeData = await query.json();
-  const shopifyDomain = storeData.data.shop.myshopifyDomain;
 
   const formData = await request.formData();
   const id = formData.get('id');
@@ -68,7 +57,7 @@ export async function action({ request }: ActionFunctionArgs) {
     throw new Response('Invalid purchase ID', { status: 400 });
   }
 
-  await deletePurchaseData(shopifyDomain, id);
+  await deletePurchaseData(session.shop, id);
 
   return redirect('/app/purchase-history');
 }
@@ -222,26 +211,19 @@ export default function Purchases() {
   );
 }
 
-export function ErrorBoundary({ error }: ErrorBoundaryProps) {
-  console.error("ErrorBoundary caught an error:", error);
+export function ErrorBoundary() {
+  const error = useRouteError();
+  console.error("Settings error boundary caught:", error);
 
   return (
-    <Page title="Error">
-      <BlockStack gap="400">
-        <h1>Something went wrong</h1>
-        <p>
-          An unexpected error occurred. Please try reloading the page. If the issue persists, contact support.
-        </p>
-        <div>
-          <strong>Error Message:</strong> {error.message}
-        </div>
-        {error.stack && (
-          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#555" }}>
-            {error.stack}
-          </pre>
-        )}
-        <Button onClick={() => window.location.reload()}>Reload Page</Button>
-      </BlockStack>
-    </Page>
+    <CustomErrorBoundary 
+      error={error instanceof Error ? error : new Error("Unknown error")}
+      componentStack={error instanceof Error ? error.stack : undefined}
+    />
   );
-}
+};
+
+export const headers: HeadersFunction = (args) => {
+  return boundary.headers(args);
+};
+

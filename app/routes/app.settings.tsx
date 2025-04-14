@@ -1,5 +1,5 @@
 import { ButtonUiEnum, LoaderUiEnum } from "@prisma/client";
-import { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs, json } from "@remix-run/node";
+import { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { useFetcher, useLoaderData, useNavigate, useRouteError } from "@remix-run/react";
 import { useBreakpoints, Page, BlockStack, Divider, InlineStack, ButtonGroup, Button, Banner } from "@shopify/polaris";
 import { StoreSettingsDto } from "app/models/dtos/settings/Settings.dto";
@@ -13,7 +13,6 @@ import { ErrorBoundary as CustomErrorBoundary } from "app/components/ErrorBounda
 import { boundary } from "@shopify/shopify-app-remix/server";
 
 export async function loader({ request, }: LoaderFunctionArgs) {
-  console.log("settings loader")
   const { session } = await authenticate.admin(request);
 
   const storeSettings = await getStoreSettings(session.shop)
@@ -23,7 +22,6 @@ export async function loader({ request, }: LoaderFunctionArgs) {
 
 export async function action({ request }: ActionFunctionArgs) {
   try {
-    console.log("settings action")
     const { session } = await authenticate.admin(request);
 
     const formData = await request.formData();
@@ -34,14 +32,12 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     const storeSettingsData = JSON.parse(storeSettingsDataString) as Partial<StoreSettingsDto>;
-
     await updateStoreSettings(session.shop, storeSettingsData);
 
-    return json({ success: true });
+    return ({ success: true });
   
   } catch (error) {
-    console.error("Error in settings action:", error);
-    return json({ success: false, error: "Failed to update settings" });
+    return ({ success: false, error: "Failed to update settings" });
   }
 }
 

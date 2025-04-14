@@ -10,6 +10,7 @@ import {
 
 import { 
   ActionFunctionArgs, 
+  HeadersFunction, 
   LoaderFunctionArgs, 
   redirect 
 } from "@remix-run/node";
@@ -17,7 +18,8 @@ import {
 import { 
   useFetcher, 
   useLoaderData, 
-  useNavigate 
+  useNavigate, 
+  useRouteError
 } from "@remix-run/react";
 
 import { useState, useEffect } from "react";
@@ -41,6 +43,10 @@ import { CampaignLimits } from "app/components/campaings/limits/CampaignLimits";
 import { syncCampaignData } from "app/utils/campaign/syncCampaignData";
 import { authenticate } from "app/shopify.server";
 
+import { ErrorBoundary as CustomErrorBoundary } from "app/components/ErrorBoundary";
+import { boundary } from "@shopify/shopify-app-remix/server";
+
+
 interface FetcherData {
   redirect?: string;
   error?: string;
@@ -52,12 +58,8 @@ interface ErrorBoundaryProps {
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   console.log("campaign editor loader")
-  const { admin } = await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
   console.log("campaign edito authenticate")
-  
-  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-  const storeData = await query.json();
-  const shopifyDomain = storeData.data.shop.myshopifyDomain;
   
   try {
     if (!params.id || params.id === "new") {
@@ -67,7 +69,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       };
     }
 
-    const campaign = await getCampaign(shopifyDomain, params.id);
+    const campaign = await getCampaign(session.shop, params.id);
     return {
       isNew: false,
       campaign
@@ -84,18 +86,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  console.log("campaign editor action")
-  const {admin, redirect} = await authenticate.admin(request);
-  console.log("campaign editor action authenticate")
-  
-  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-  const storeData = await query.json();
-  const shopifyDomain = storeData.data.shop.myshopifyDomain;
+  const { redirect } = await authenticate.admin(request);
 
   const formData = await request.formData();
   const campaignData = JSON.parse(formData.get("campaign") as string);
 
-  await syncCampaignData(campaignData, shopifyDomain);
+  await syncCampaignData(campaignData, campaignData.shop);
 
   return redirect("/app/campaigns");
 }
@@ -213,26 +209,19 @@ export default function CampaignEditor() {
   );
 }
 
-export function ErrorBoundary({ error }: ErrorBoundaryProps) {
-  console.error("ErrorBoundary caught an error:", error);
+export function ErrorBoundary() {
+  const error = useRouteError();
+  console.error("Settings error boundary caught:", error);
 
   return (
-    <Page title="Error">
-      <BlockStack gap="400">
-        <h1>Something went wrong</h1>
-        <p>
-          An unexpected error occurred. Please try reloading the page. If the issue persists, contact support.
-        </p>
-        <div>
-          <strong>Error Message:</strong> {error.message}
-        </div>
-        {error.stack && (
-          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#555" }}>
-            {error.stack}
-          </pre>
-        )}
-        <Button onClick={() => window.location.reload()}>Reload Page</Button>
-      </BlockStack>
-    </Page>
+    <CustomErrorBoundary 
+      error={error instanceof Error ? error : new Error("Unknown error")}
+      componentStack={error instanceof Error ? error.stack : undefined}
+    />
   );
-}
+};
+
+export const headers: HeadersFunction = (args) => {
+  return boundary.headers(args);
+};
+

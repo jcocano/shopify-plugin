@@ -6,13 +6,13 @@ export const CampaingsEmptySatate = () => {
   const navigate = useNavigate();
 
   function newCampaing() {
-    navigate(`/app/campaign/new`);
+    navigate(`/app/editor/campaign/new`);
   }
   
   return (
     <Page
-      title="campaigns"
-      subtitle="Get started by creating your first campaign and let the good times roll!"
+      title="Campaigns"
+      subtitle="Get started by creating your first campaign!"
       compactTitle
       primaryAction={{
         content: 'New campaign', 

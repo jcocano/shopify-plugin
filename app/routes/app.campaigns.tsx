@@ -1,39 +1,28 @@
 import { Bleed, BlockStack, Box, Button, ButtonGroup, Card, InlineGrid, InlineStack, Page, Text } from '@shopify/polaris';
 import { EditIcon, DeleteIcon, PauseCircleIcon, PlayCircleIcon } from '@shopify/polaris-icons';
-import { useLoaderData, useFetcher, useNavigate, useSearchParams } from '@remix-run/react';
-import { ActionFunctionArgs, LoaderFunctionArgs, redirect } from '@remix-run/node';
+import { useLoaderData, useFetcher, useNavigate, useSearchParams, useRouteError } from '@remix-run/react';
+import { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs, redirect } from '@remix-run/node';
 
 import { getCampaigns, updateCampaign, deleteCampaign } from '../models/campaigns/Campaigns.server'
-import { getShopDomain } from 'app/utils/shopify/getShopDomain';
 import { CampaingsEmptySatate } from 'app/components/campaings/CampaignsEmptySatate';
 import { deleteCampaignOnTokenproof } from 'app/utils/tokenproof/deleteCampaignOnTokenproof';
 import { authenticate } from 'app/shopify.server';
+import { CampaignDto } from 'app/models/dtos/campaigns/Campaign.dto';
 
-interface ErrorBoundaryProps {
-  error: Error;
-}
+import { ErrorBoundary as CustomErrorBoundary } from "app/components/ErrorBoundary";
+import { boundary } from "@shopify/shopify-app-remix/server";
+
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  console.log("campaigns loader")
-  const { admin } = await authenticate.admin(request);
-  console.log("campaigns authenticate")
-  
-  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-  const storeData = await query.json();
-  const shopifyDomain = storeData.data.shop.myshopifyDomain;
+  const { session } = await authenticate.admin(request);
  
-  const campaigns = await getCampaigns(shopifyDomain);
-  return campaigns;
+  const campaigns = await getCampaigns(session.shop);
+  return JSON.stringify(campaigns);
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   console.log("campaigns action")
-  const {admin, redirect} = await authenticate.admin(request);
-  console.log("campaigns action authenticate")
-  
-  const query = await admin.graphql(`{ shop { myshopifyDomain } }`);
-  const storeData = await query.json();
-  const shopifyDomain = storeData.data.shop.myshopifyDomain;
+  const { session, redirect } = await authenticate.admin(request);
 
   const formData = await request.formData();
   const campaignId = String(formData.get('id'));
@@ -45,14 +34,14 @@ export async function action({ request }: ActionFunctionArgs) {
 
   switch (campaignAction) {
     case "activate":
-      await updateCampaign(shopifyDomain, campaignId, { is_active: true });
+      await updateCampaign(session.shop, campaignId, { is_active: true });
       break;
     case "pause":
-      await updateCampaign(shopifyDomain, campaignId, { is_active: false });
+      await updateCampaign(session.shop, campaignId, { is_active: false });
       break;
     case "delete":
-      await deleteCampaignOnTokenproof(shopifyDomain, campaignId);
-      await deleteCampaign(shopifyDomain, campaignId);
+      await deleteCampaignOnTokenproof(session.shop, campaignId);
+      await deleteCampaign(session.shop, campaignId);
       break;
     default:
       throw new Error("Invalid action");
@@ -66,7 +55,7 @@ export default function Campaign() {
   const shop = searchParams.get('shop');
   const host = searchParams.get('host');
   
-  const { result: campaigns, filterRecords, totalRecords } = useLoaderData<typeof loader>();
+  const campaignsData = JSON.parse(useLoaderData<typeof loader>());
   const fetcher = useFetcher();
   const navigate = useNavigate();
 
@@ -100,14 +89,14 @@ export default function Campaign() {
     navigate(getUrlWithParams(`/app/campaign/${id}`));
   };
 
-  if(!campaigns || campaigns.length === 0) {
+  if(!campaignsData.result || campaignsData.result.length === 0) {
     return <CampaingsEmptySatate/>
   }
 
   return (
     <Page
       title="Campaigns"
-      subtitle="Your campaigns are ready to rock (and maybe roll)!"
+      subtitle="Your campaigns are ready to rock!"
       compactTitle
       primaryAction={{
         content: 'New campaign', 
@@ -120,7 +109,7 @@ export default function Campaign() {
       }}
     >
       <BlockStack gap="400">
-        {campaigns.map((campaign, index) => (
+        {campaignsData.result.map((campaign: CampaignDto, index: number) => (
           <Card key={index} roundedAbove="sm">
             <BlockStack gap="200">
               <InlineGrid columns="1fr auto">
@@ -216,26 +205,19 @@ export default function Campaign() {
   );
 }
 
-export function ErrorBoundary({ error }: ErrorBoundaryProps) {
-  console.error("ErrorBoundary caught an error:", error);
+export function ErrorBoundary() {
+  const error = useRouteError();
+  console.error("Settings error boundary caught:", error);
 
   return (
-    <Page title="Error">
-      <BlockStack gap="400">
-        <h1>Something went wrong</h1>
-        <p>
-          An unexpected error occurred. Please try reloading the page. If the issue persists, contact support.
-        </p>
-        <div>
-          <strong>Error Message:</strong> {error.message}
-        </div>
-        {error.stack && (
-          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", color: "#555" }}>
-            {error.stack}
-          </pre>
-        )}
-        <Button onClick={() => window.location.reload()}>Reload Page</Button>
-      </BlockStack>
-    </Page>
+    <CustomErrorBoundary 
+      error={error instanceof Error ? error : new Error("Unknown error")}
+      componentStack={error instanceof Error ? error.stack : undefined}
+    />
   );
-}
+};
+
+export const headers: HeadersFunction = (args) => {
+  return boundary.headers(args);
+};
+
