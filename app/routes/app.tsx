@@ -26,7 +26,17 @@ export const useToast = () => useContext(ToastContext);
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { admin } = await authenticate.admin(request);
+    console.log("App loader: Starting authentication");
+    const { admin, redirect } = await authenticate.admin(request);
+    
+    // If redirect is returned, it means we need to authenticate
+    if (redirect) {
+      console.log("App loader: Authentication required, redirecting to:", redirect);
+      return redirect;
+    }
+    
+    console.log("App loader: Authentication successful");
+    
     // store data
     const query = await admin.graphql(`{ shop { email myshopifyDomain } }`);
     const storeData = await query.json();
