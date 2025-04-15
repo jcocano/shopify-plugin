@@ -65,7 +65,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function App() {
-  const { apiKey, isTokenproofStoreEnroll } = useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
+  
+  // If loaderData is null, it means we're being redirected
+  if (!loaderData) {
+    return null;
+  }
+  
+  const { apiKey, isTokenproofStoreEnroll } = loaderData;
   
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
