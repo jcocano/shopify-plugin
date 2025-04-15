@@ -13,8 +13,6 @@ import { ErrorBoundary as CustomErrorBoundary } from "app/components/ErrorBounda
 import { boundary } from "@shopify/shopify-app-remix/server";
 
 export async function loader({ request, }: LoaderFunctionArgs) {
-  const cookieHeader = request.headers.get("Cookie");
-  console.log("Cookie recibida en loader:", cookieHeader);
   const { session } = await authenticate.admin(request);
 
   const storeSettings = await getStoreSettings(session.shop)

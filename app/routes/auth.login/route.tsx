@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { Form, useActionData, useLoaderData, redirect } from "@remix-run/react";
+import { Form, useActionData, useLoaderData } from "@remix-run/react";
 import {
   AppProvider as PolarisAppProvider,
   Button,
@@ -20,27 +20,17 @@ import { loginErrorMessage } from "./error.server";
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
-  
-  if (shop) {
-    return redirect(`/auth/shopify?shop=${shop}`);
-  }
-  
   const errors = loginErrorMessage(await login(request));
+
   return { errors, polarisTranslations };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const formData = await request.formData();
-  const shop = formData.get("shop");
-  
-  if (shop) {
-    return redirect(`/auth/shopify?shop=${shop}`);
-  }
-  
   const errors = loginErrorMessage(await login(request));
-  return { errors };
+
+  return {
+    errors,
+  };
 };
 
 export default function Auth() {

@@ -1,18 +1,15 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { Link, Outlet, useLoaderData, useRouteError, useNavigate, NavLink } from "@remix-run/react";
+import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
-import { Frame } from "@shopify/polaris";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
-import { Toast } from "@shopify/polaris";
+import { Frame, Toast } from "@shopify/polaris";
 import { useState, createContext, useContext, useEffect, useRef } from "react";
-import { json, redirect } from "@remix-run/node";
 
 import { authenticate } from "../shopify.server";
 import { storeOnboarding } from "app/utils/settings/storeOnboarding";
 import { ErrorBoundary as CustomErrorBoundary } from "app/components/ErrorBoundary";
-import enTranslations from '@shopify/polaris/locales/en.json';
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
@@ -29,82 +26,87 @@ export const useToast = () => useContext(ToastContext);
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    console.log("App loader: Starting authentication");
-    const { admin, redirect: authRedirect } = await authenticate.admin(request);
-    
-    // If we get a redirect, return it immediately
-    if (authRedirect) {
-      console.log("App loader: Authentication required, redirecting to:", authRedirect);
-      return authRedirect;
-    }
-    
-    // If we have admin access, proceed with the app logic
-    if (admin) {
-      console.log("App loader: Authentication successful");
-      
-      // store data
-      const query = await admin.graphql(`{ shop { email myshopifyDomain } }`);
-      const storeData = await query.json();
-      const shopifyData = storeData.data.shop;
+    const { admin } = await authenticate.admin(request);
+    // store data
+    const query = await admin.graphql(`{ shop { email myshopifyDomain } }`);
+    const storeData = await query.json();
+    const shopifyData = storeData.data.shop;
 
-      const settings = await storeOnboarding(shopifyData.myshopifyDomain, shopifyData.email);
-      const isTokenproofStoreEnroll = false; // Simplified for now
+    const settings = await storeOnboarding(shopifyData.myshopifyDomain, shopifyData.email);
+    const isTokenproofStoreEnroll = () => !!settings.api_key;
 
-      return json({
-        apiKey: process.env.SHOPIFY_API_KEY || "",
-        isTokenproofStoreEnroll
-      });
-    }
-    
-    // If we get here, something went wrong with authentication
-    console.error("App loader: Authentication failed - no admin or redirect");
-    return redirect("/auth");
-    
+    return { apiKey: process.env.SHOPIFY_API_KEY || "", isTokenproofStoreEnroll };
   } catch (error) {
     console.error("Error in app loader:", error);
-    return json({
-      apiKey: process.env.SHOPIFY_API_KEY || "",
-      isTokenproofStoreEnroll: false
-    });
+    // Return a minimal response that won't break the app
+    return { apiKey: process.env.SHOPIFY_API_KEY || "", isTokenproofStoreEnroll: () => false };
   }
 };
 
 export default function App() {
-  const loaderData = useLoaderData<typeof loader>();
-  
-  // If loaderData is null, it means we're being redirected
-  if (!loaderData) {
-    return null;
-  }
-  
-  const { apiKey, isTokenproofStoreEnroll } = loaderData;
-  
+  const { apiKey } = useLoaderData<typeof loader>();
+  const [toastActive, setToastActive] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastError, setToastError] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Función para mostrar el toast
+  const showToast = (message: string, error = false) => {
+    console.log("Showing toast:", message, "error:", error);
+    
+    // Limpia cualquier temporizador existente para evitar duplicados
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    // Actualiza el estado del toast
+    setToastMessage(message);
+    setToastError(error);
+    setToastActive(true);
+    
+    // Configura el temporizador para ocultar automáticamente el toast
+    timeoutRef.current = setTimeout(() => {
+      setToastActive(false);
+      timeoutRef.current = null;
+    }, 4000); // 4 segundos
+  };
+
+  // Limpia cualquier temporizador pendiente cuando el componente se desmonta
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
-      <ui-nav-menu>
-        <NavLink
-          to="/app"
-          end
-          style={({ isActive }: { isActive: boolean }) => ({
-            color: isActive ? "rgb(var(--p-text))" : "rgb(var(--p-text-subdued))",
-            background: isActive ? "rgb(var(--p-surface-selected))" : "transparent",
-          })}
-        >
-          home
-        </NavLink>
-        <NavLink
-          to="/app/settings"
-          style={({ isActive }: { isActive: boolean }) => ({
-            color: isActive ? "rgb(var(--p-text))" : "rgb(var(--p-text-subdued))",
-            background: isActive ? "rgb(var(--p-surface-selected))" : "transparent",
-          })}
-        >
-          Settings
-        </NavLink>
-      </ui-nav-menu>
-      <Frame>
-        <Outlet context={{ apiKey, isTokenproofStoreEnroll }} />
-      </Frame>
+      <ToastContext.Provider value={{ showToast }}>
+        <Frame>
+          <NavMenu>
+            <Link to="/app/campaigns" rel="home">
+              Home
+            </Link>
+            <Link to="/app/campaigns">All Campaigns</Link>
+            <Link to="/app/editor/campaign/new">Create Campaigns</Link>
+            <Link to="/app/purchases">Purchase History</Link>
+            <Link to="/app/settings">Settings</Link>
+          </NavMenu>
+          {toastActive && (
+            <Toast
+              content={toastMessage}
+              error={toastError}
+              onDismiss={() => {
+                console.log("Toast dismissed");
+                setToastActive(false);
+              }}
+            />
+          )}
+          <Outlet />
+        </Frame>
+      </ToastContext.Provider>
     </AppProvider>
   );
 }
