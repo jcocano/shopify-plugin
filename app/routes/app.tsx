@@ -7,7 +7,7 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { Toast } from "@shopify/polaris";
 import { useState, createContext, useContext, useEffect, useRef } from "react";
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 
 import { authenticate } from "../shopify.server";
 import { storeOnboarding } from "app/utils/settings/storeOnboarding";
@@ -28,17 +28,14 @@ export const ToastContext = createContext<ToastContextType>({
 export const useToast = () => useContext(ToastContext);
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
-  const apiKey = process.env.SHOPIFY_API_KEY || "";
-  
   try {
     console.log("App loader: Starting authentication");
-    const { redirect } = await authenticate.admin(request);
+    const { admin, redirect: authRedirect } = await authenticate.admin(request);
     
     // If redirect is returned, it means we need to authenticate
-    if (redirect) {
-      console.log("App loader: Authentication required, redirecting to:", redirect);
-      return redirect;
+    if (authRedirect) {
+      console.log("App loader: Authentication required, redirecting to:", authRedirect);
+      return authRedirect;
     }
     
     console.log("App loader: Authentication successful");
@@ -52,13 +49,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const isTokenproofStoreEnroll = false; // Simplified for now
 
     return json({
-      apiKey,
+      apiKey: process.env.SHOPIFY_API_KEY || "",
       isTokenproofStoreEnroll
     });
   } catch (error) {
     console.error("Error in app loader:", error);
     return json({
-      apiKey,
+      apiKey: process.env.SHOPIFY_API_KEY || "",
       isTokenproofStoreEnroll: false
     });
   }
