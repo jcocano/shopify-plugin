@@ -30,28 +30,36 @@ export const useToast = () => useContext(ToastContext);
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     console.log("App loader: Starting authentication");
-    const { admin, redirect: authRedirect } = await authenticate.admin(request);
+    const authResult = await authenticate.admin(request);
     
-    // If redirect is returned, it means we need to authenticate
-    if (authRedirect) {
-      console.log("App loader: Authentication required, redirecting to:", authRedirect);
-      return authRedirect;
+    // If we get a redirect, return it immediately
+    if (authResult.redirect) {
+      console.log("App loader: Authentication required, redirecting to:", authResult.redirect);
+      return authResult.redirect;
     }
     
-    console.log("App loader: Authentication successful");
+    // If we have admin access, proceed with the app logic
+    if (authResult.admin) {
+      console.log("App loader: Authentication successful");
+      
+      // store data
+      const query = await authResult.admin.graphql(`{ shop { email myshopifyDomain } }`);
+      const storeData = await query.json();
+      const shopifyData = storeData.data.shop;
+
+      const settings = await storeOnboarding(shopifyData.myshopifyDomain, shopifyData.email);
+      const isTokenproofStoreEnroll = false; // Simplified for now
+
+      return json({
+        apiKey: process.env.SHOPIFY_API_KEY || "",
+        isTokenproofStoreEnroll
+      });
+    }
     
-    // store data
-    const query = await admin.graphql(`{ shop { email myshopifyDomain } }`);
-    const storeData = await query.json();
-    const shopifyData = storeData.data.shop;
-
-    const settings = await storeOnboarding(shopifyData.myshopifyDomain, shopifyData.email);
-    const isTokenproofStoreEnroll = false; // Simplified for now
-
-    return json({
-      apiKey: process.env.SHOPIFY_API_KEY || "",
-      isTokenproofStoreEnroll
-    });
+    // If we get here, something went wrong with authentication
+    console.error("App loader: Authentication failed - no admin or redirect");
+    return redirect("/auth");
+    
   } catch (error) {
     console.error("Error in app loader:", error);
     return json({
