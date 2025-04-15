@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "2c0bcde2090899f3759523b39486311d"
-application_url = "https://shopify-plugin-vebr.onrender.com"
+application_url = "https://shopify-plugin-uikg.onrender.com"
 embedded = true
 name = "tokenproof-plugin"
 handle = "tokenproof-plugin"
@@ -23,13 +23,13 @@ api_version = "2025-04"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "read_orders, write_orders, read_products, write_products, read_inventory, read_themes, write_themes, read_inventory"
 
 [auth]
 redirect_urls = [
-  "https://shopify-plugin-vebr.onrender.com/auth/callback",
-  "https://shopify-plugin-vebr.onrender.com/auth/shopify/callback",
-  "https://shopify-plugin-vebr.onrender.com/api/auth/callback"
+  "https://shopify-plugin-uikg.onrender.com/auth/callback",
+  "https://shopify-plugin-uikg.onrender.com/auth/shopify/callback",
+  "https://shopify-plugin-uikg.onrender.com/api/auth/callback"
 ]
 
 [pos]
