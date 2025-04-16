@@ -3,7 +3,6 @@ import { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "@remix-
 import { useFetcher, useLoaderData, useNavigate, useRouteError } from "@remix-run/react";
 import { useBreakpoints, Page, BlockStack, Divider, InlineStack, ButtonGroup, Button, Banner } from "@shopify/polaris";
 import { StoreSettingsDto } from "app/models/dtos/settings/Settings.dto";
-import { getStoreSettings, updateStoreSettings } from "app/models/settings/Settings.server";
 import { useState, useCallback, useEffect } from "react";
 
 import { TimezoneSelector } from "app/components/settings/timezone/TimezoneSelector";
@@ -13,7 +12,9 @@ import { ErrorBoundary as CustomErrorBoundary } from "app/components/ErrorBounda
 import { boundary } from "@shopify/shopify-app-remix/server";
 
 export async function loader({ request, }: LoaderFunctionArgs) {
+
   const { session } = await authenticate.admin(request);
+  const { getStoreSettings } = await import("app/models/settings/Settings.server");
 
   const storeSettings = await getStoreSettings(session.shop)
   
@@ -21,24 +22,20 @@ export async function loader({ request, }: LoaderFunctionArgs) {
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  try {
-    const { session } = await authenticate.admin(request);
-
-    const formData = await request.formData();
-    const storeSettingsDataString = formData.get("storeSettings");
-
-    if (!storeSettingsDataString || typeof storeSettingsDataString !== "string") {
-      throw new Error("Failed to get store settings data");
-    }
-
-    const storeSettingsData = JSON.parse(storeSettingsDataString) as Partial<StoreSettingsDto>;
-    await updateStoreSettings(session.shop, storeSettingsData);
-
-    return ({ success: true });
+  const { session, redirect } = await authenticate.admin(request);
+  const { updateStoreSettings } = await import("app/models/settings/Settings.server");
   
-  } catch (error) {
-    return ({ success: false, error: "Failed to update settings" });
+  const formData = await request.formData();
+  const storeSettingsDataString = formData.get("storeSettings");
+
+  if (!storeSettingsDataString || typeof storeSettingsDataString !== "string") {
+    throw new Error("Failed to get store settings data");
   }
+
+  const storeSettingsData = JSON.parse(storeSettingsDataString) as Partial<StoreSettingsDto>;
+  await updateStoreSettings(session.shop, storeSettingsData);
+
+  return redirect("/app/campaigns");
 }
 
 export default function Settings() {
