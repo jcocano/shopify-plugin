@@ -15,9 +15,12 @@ export async function loader({ request, }: LoaderFunctionArgs) {
 
   const { session } = await authenticate.admin(request);
   const { getStoreSettings } = await import("app/models/settings/Settings.server");
+  
+  console.log("before get settings:", session.shop);
+
 
   const storeSettings = await getStoreSettings(session.shop)
-  
+  console.log("after get settings:", storeSettings);
   return ({ storeSettings: storeSettings })
 }
 
