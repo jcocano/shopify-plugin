@@ -14,6 +14,20 @@ import { boundary } from "@shopify/shopify-app-remix/server";
 export async function loader({ request, }: LoaderFunctionArgs) {
 
   const { session } = await authenticate.admin(request);
+
+  if (!session) {
+    const currentPath = new URL(request.url).pathname;
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: `/auth?return_to=${encodeURIComponent(currentPath)}`,
+      },
+    });
+  }
+
+
+  console.log(">> Session found for shop:", session.shop);
+
   const { getStoreSettings } = await import("app/models/settings/Settings.server");
   
   console.log("before get settings:", session.shop);

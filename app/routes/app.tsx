@@ -82,7 +82,10 @@ export default function App() {
   }, []);
 
   return (
-    <AppProvider isEmbeddedApp apiKey={apiKey}>
+    <AppProvider 
+      isEmbeddedApp 
+      apiKey={apiKey}
+      >
       <ToastContext.Provider value={{ showToast }}>
         <Frame>
           <NavMenu>
